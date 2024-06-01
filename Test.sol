@@ -1,68 +1,40 @@
-// contracts/Test.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.7;
 
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol';
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/utils/SafeERC20.sol';
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 
-contract Test {
-    address payable owner;
+contract TokenTransfer {
+    address _token = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831; // USDC
 
-    constructor()
-    {
-        owner = payable(msg.sender);
+    // token = MyToken's contract address
+    constructor() {
     }
 
-    /**
-        Testing basic ERC20 token functions.
-     */
-
-    function getTokenBalance(
-        address _tokenAddress
-    ) external view returns (uint256) {
-        return IERC20(_tokenAddress).balanceOf(address(this));
-    }
-
-    function approveTokenAmount(
-        address _tokenAddress,
-        uint256 _amount
-    ) external onlyOwner {
-        IERC20(_tokenAddress).approve(msg.sender, _amount);
-    }
-
-    function depositTokenAmount(
-        address _tokenAddress, 
-        uint256 _amount
-    ) external onlyOwner {
-      IERC20 token = IERC20(_tokenAddress);
-      uint256 allowance = token.allowance(
-                                msg.sender,
-                                address(this)
-      );
-      require(allowance >= _amount, 'msg.sender allowance too low.');
-      token.transferFrom(
-        msg.sender,
-        address(this),
-        _amount
-      );
-    }
-
-    function withdrawTokenBalance(
-        address _tokenAddress
-    ) external onlyOwner {
-        IERC20(_tokenAddress).transfer(
-            msg.sender,
-            IERC20(_tokenAddress).balanceOf(address(this))
-        );
-    }
-
-    modifier onlyOwner() {
-        require(
-            msg.sender == owner,
-            "Only the contract owner can call this function"
-        );
+    // Modifier to check token allowance
+    modifier checkAllowance(uint amount) {
+        require(IERC20(_token).allowance(msg.sender, address(this)) >= amount, "Error");
         _;
     }
 
-    receive() external payable {}
+    function approveTokenAmount(uint256 _amount) external {
+        IERC20(_token).approve(address(this), _amount);
+    }
+
+    // In your case, Account A must to call this function and then deposit an amount of tokens 
+    function depositTokens(uint _amount) public checkAllowance(_amount) {
+        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        uint refund = _amount / 2;
+        IERC20(_token).transfer(msg.sender, refund);
+    }
+    
+    // to = Account B's address
+    function stake(address to, uint amount) public {
+        IERC20(_token).transfer(to, amount);
+    }
+
+    // Allow you to show how many tokens owns this smart contract
+    function getSmartContractBalance() external view returns(uint) {
+        return IERC20(_token).balanceOf(address(this));
+    }
+    
 }
